@@ -9,7 +9,6 @@
 #include <utility>
 #include <vector>
 #include <thread>
-#include <mutex>
 
 #include "dictionary_segment.hpp"
 #include "value_segment.hpp"
