@@ -1,22 +1,25 @@
 #pragma once
 
+#include <iostream>
+#include <iterator>
 #include <limits>
 #include <memory>
-#include <iostream>
+#include <set>
 #include <string>
 #include <utility>
 #include <vector>
-#include <iterator>
-#include <set>
 
 #include "all_type_variant.hpp"
-#include "type_cast.hpp"
-#include "types.hpp"
 #include "base_attribute_vector.hpp"
 #include "base_segment.hpp"
 #include "fixed_size_attribute_vector.hpp"
+#include "type_cast.hpp"
+#include "types.hpp"
 
 namespace opossum {
+
+class BaseAttributeVector;
+class BaseSegment;
 
 // Even though ValueIDs do not have to use the full width of ValueID (uint32_t), this will also work for smaller ValueID
 // types (uint8_t, uint16_t) since after a down-cast INVALID_VALUE_ID will look like their numeric_limit::max()
@@ -29,8 +32,8 @@ class DictionarySegment : public BaseSegment {
   /**
    * Creates a Dictionary segment from a given value segment.
    */
-  explicit DictionarySegment(const std::shared_ptr<BaseSegment>& base_segment) :
-  _dictionary(std::make_shared<std::vector<T>>()) {
+  explicit DictionarySegment(const std::shared_ptr<BaseSegment>& base_segment)
+      : _dictionary(std::make_shared<std::vector<T>>()) {
     size_t attribute_vector_size = 0;
     std::set<T> dictionary_helper;
     for (size_t segment_iterator = 0; segment_iterator < base_segment->size(); ++segment_iterator) {
@@ -38,7 +41,7 @@ class DictionarySegment : public BaseSegment {
       attribute_vector_size++;
     }
     _dictionary->reserve(dictionary_helper.size());
-    for (auto it = dictionary_helper.begin(); it != dictionary_helper.end(); ) {
+    for (auto it = dictionary_helper.begin(); it != dictionary_helper.end();) {
       _dictionary->emplace_back(std::move(dictionary_helper.extract(it++).value()));
     }
 
@@ -74,19 +77,13 @@ class DictionarySegment : public BaseSegment {
   }
 
   // returns an underlying dictionary
-  std::shared_ptr<const std::vector<T>> dictionary() const {
-    return _dictionary;
-  }
+  std::shared_ptr<const std::vector<T>> dictionary() const { return _dictionary; }
 
   // returns an underlying data structure
-  std::shared_ptr<BaseAttributeVector> attribute_vector() const {
-    return _attribute_vector;
-  }
+  std::shared_ptr<BaseAttributeVector> attribute_vector() const { return _attribute_vector; }
 
   // return the value represented by a given ValueID
-  const T& value_by_value_id(ValueID value_id) const {
-    return _dictionary->at(value_id);
-  }
+  const T& value_by_value_id(ValueID value_id) const { return _dictionary->at(value_id); }
 
   // returns the first value ID that refers to a value >= the search value
   // returns INVALID_VALUE_ID if all values are smaller than the search value
@@ -100,9 +97,7 @@ class DictionarySegment : public BaseSegment {
   }
 
   // same as lower_bound(T), but accepts an AllTypeVariant
-  ValueID lower_bound(const AllTypeVariant& value) const {
-    return lower_bound(static_cast<T>(value));
-  }
+  ValueID lower_bound(const AllTypeVariant& value) const { return lower_bound(static_cast<T>(value)); }
 
   // returns the first value ID that refers to a value > the search value
   // returns INVALID_VALUE_ID if all values are smaller than or equal to the search value
@@ -116,19 +111,13 @@ class DictionarySegment : public BaseSegment {
   }
 
   // same as upper_bound(T), but accepts an AllTypeVariant
-  ValueID upper_bound(const AllTypeVariant& value) const {
-    return upper_bound(static_cast<T>(value));
-  }
+  ValueID upper_bound(const AllTypeVariant& value) const { return upper_bound(static_cast<T>(value)); }
 
   // return the number of unique_values (dictionary entries)
-  size_t unique_values_count() const {
-    return _dictionary->size();
-  }
+  size_t unique_values_count() const { return _dictionary->size(); }
 
   // return the number of entries
-  size_t size() const override {
-    return _attribute_vector->size();
-  }
+  size_t size() const override { return _attribute_vector->size(); }
 
   // returns the calculated memory usage of the segment
   size_t estimate_memory_usage() const {

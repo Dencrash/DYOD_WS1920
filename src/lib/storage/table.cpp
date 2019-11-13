@@ -6,9 +6,9 @@
 #include <memory>
 #include <numeric>
 #include <string>
+#include <thread>
 #include <utility>
 #include <vector>
-#include <thread>
 
 #include "dictionary_segment.hpp"
 #include "value_segment.hpp"
@@ -22,6 +22,10 @@ namespace opossum {
 Table::Table(const uint32_t chunk_size) {
   _max_chunk_size = chunk_size;
   _chunks.push_back(std::make_shared<Chunk>());
+}
+
+void Table::add_column_definition(const std::string& name, const std::string& type) {
+  // Implementation goes here
 }
 
 void Table::add_column(const std::string& name, const std::string& type) {
@@ -39,14 +43,21 @@ void Table::append(std::vector<AllTypeVariant> values) {
   // Check if the latest Chunk has already reached maximum size and create a new one if necessary
   if (this->is_new_chunk_needed()) {
     _chunks.push_back(std::make_shared<Chunk>());
-
     for (auto type_name : _column_types) {
       auto segment = make_shared_by_data_type<BaseSegment, ValueSegment>(type_name);
       _chunks.back()->add_segment(segment);
     }
   }
-
   _chunks.back()->append(values);
+}
+
+void Table::create_new_chunk() {
+  // Implementation goes here
+}
+
+uint16_t Table::column_count() const {
+  // Implementation goes here
+  return 0;
 }
 
 bool Table::is_new_chunk_needed() { return _chunks.back()->size() >= _max_chunk_size; }
@@ -95,17 +106,18 @@ void Table::compress_chunk(ChunkID chunk_id) {
   dictionary_segments.resize(n_columns);
 
   for (size_t segment = 0; segment < dictionary_segments.size(); ++segment) {
-    threads.push_back(std::thread([&] (size_t seg) {
-        std::string data_type = column_type((ColumnID) seg);
-        std::shared_ptr<BaseSegment> current_segment = chunk->get_segment((ColumnID) seg);
-        auto compressed_chunk = make_shared_by_data_type<BaseSegment, DictionarySegment>
-                        (data_type, current_segment);
+    threads.push_back(std::thread(
+        [&](size_t seg) {
+          std::string data_type = column_type((ColumnID)seg);
+          std::shared_ptr<BaseSegment> current_segment = chunk->get_segment((ColumnID)seg);
+          auto compressed_chunk = make_shared_by_data_type<BaseSegment, DictionarySegment>(data_type, current_segment);
 
-        dictionary_segments[seg] = compressed_chunk;
-    }, segment));
+          dictionary_segments[seg] = compressed_chunk;
+        },
+        segment));
   }
 
-  for (size_t thread=0; thread < threads.size(); thread++) {
+  for (size_t thread = 0; thread < threads.size(); thread++) {
     if (threads[thread].joinable()) {
       threads[thread].join();
     }
@@ -116,6 +128,10 @@ void Table::compress_chunk(ChunkID chunk_id) {
   }
 
   _chunks[chunk_id] = std::move(compressed_chunk);
+}
+
+void emplace_chunk(Chunk chunk) {
+  // Implementation goes here
 }
 
 }  // namespace opossum

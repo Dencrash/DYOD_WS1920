@@ -55,62 +55,62 @@ TEST_F(StorageDictionarySegmentTest, LowerUpperBound) {
 }
 
 TEST_F(StorageDictionarySegmentTest, GetDictionaryChunkOffSet) {
-    vc_str->append("Bill");
-    vc_str->append("Steve");
-    vc_str->append("Alexander");
-    vc_str->append("Steve");
-    vc_str->append("Hasso");
-    vc_str->append("Bill");
+  vc_str->append("Bill");
+  vc_str->append("Steve");
+  vc_str->append("Alexander");
+  vc_str->append("Steve");
+  vc_str->append("Hasso");
+  vc_str->append("Bill");
 
-    auto col = opossum::make_shared_by_data_type<opossum::BaseSegment, opossum::DictionarySegment>("string", vc_str);
-    auto dict_col = std::dynamic_pointer_cast<opossum::DictionarySegment<std::string>>(col);
+  auto col = opossum::make_shared_by_data_type<opossum::BaseSegment, opossum::DictionarySegment>("string", vc_str);
+  auto dict_col = std::dynamic_pointer_cast<opossum::DictionarySegment<std::string>>(col);
 
-    EXPECT_EQ(dict_col->get(0), "Bill");
-    EXPECT_EQ(dict_col->get(2), "Alexander");
-    EXPECT_EQ(dict_col->get(4), "Hasso");
+  EXPECT_EQ(dict_col->get(0), "Bill");
+  EXPECT_EQ(dict_col->get(2), "Alexander");
+  EXPECT_EQ(dict_col->get(4), "Hasso");
 }
 
 TEST_F(StorageDictionarySegmentTest, ReturnEstimateMemoryUsage) {
-    vc_int->append(1);
-    auto col = opossum::make_shared_by_data_type<opossum::BaseSegment, opossum::DictionarySegment>("int", vc_int);
-    auto dict_col = std::dynamic_pointer_cast<opossum::DictionarySegment<int>>(col);
+  vc_int->append(1);
+  auto col = opossum::make_shared_by_data_type<opossum::BaseSegment, opossum::DictionarySegment>("int", vc_int);
+  auto dict_col = std::dynamic_pointer_cast<opossum::DictionarySegment<int>>(col);
 
-    // _dictionary: number of entries == 1 && size of integer type == 4
-    // _attribute_vector: number of entries == 1 && size of uint8_t type == 1
-    // --> 4 + 1
-    EXPECT_EQ(dict_col->estimate_memory_usage(), size_t{5});
+  // _dictionary: number of entries == 1 && size of integer type == 4
+  // _attribute_vector: number of entries == 1 && size of uint8_t type == 1
+  // --> 4 + 1
+  EXPECT_EQ(dict_col->estimate_memory_usage(), size_t{5});
 }
 
 TEST_F(StorageDictionarySegmentTest, GetAttributeVector) {
-    // append string values to string-vector
-    vc_str->append("Bill");
-    vc_str->append("Steve");
-    vc_str->append("Alexander");
-    vc_str->append("Steve");
-    vc_str->append("Hasso");
-    vc_str->append("Bill");
-    auto col = opossum::make_shared_by_data_type<opossum::BaseSegment, opossum::DictionarySegment>("string", vc_str);
-    auto dict_col = std::dynamic_pointer_cast<opossum::DictionarySegment<std::string>>(col);
+  // append string values to string-vector
+  vc_str->append("Bill");
+  vc_str->append("Steve");
+  vc_str->append("Alexander");
+  vc_str->append("Steve");
+  vc_str->append("Hasso");
+  vc_str->append("Bill");
+  auto col = opossum::make_shared_by_data_type<opossum::BaseSegment, opossum::DictionarySegment>("string", vc_str);
+  auto dict_col = std::dynamic_pointer_cast<opossum::DictionarySegment<std::string>>(col);
 
-    // Test size of attribute_vector same as value_segment
-    auto attr = dict_col->attribute_vector();
-    EXPECT_EQ(attr->size(), 6u);
+  // Test size of attribute_vector same as value_segment
+  auto attr = dict_col->attribute_vector();
+  EXPECT_EQ(attr->size(), 6u);
 }
 
 TEST_F(StorageDictionarySegmentTest, ReturnValueByValueID) {
-    // append string values to string-vector
-    vc_str->append("Bill");
-    vc_str->append("Steve");
-    vc_str->append("Alexander");
-    vc_str->append("Steve");
-    vc_str->append("Hasso");
-    vc_str->append("Bill");
-    auto col = opossum::make_shared_by_data_type<opossum::BaseSegment, opossum::DictionarySegment>("string", vc_str);
-    auto dict_col = std::dynamic_pointer_cast<opossum::DictionarySegment<std::string>>(col);
+  // append string values to string-vector
+  vc_str->append("Bill");
+  vc_str->append("Steve");
+  vc_str->append("Alexander");
+  vc_str->append("Steve");
+  vc_str->append("Hasso");
+  vc_str->append("Bill");
+  auto col = opossum::make_shared_by_data_type<opossum::BaseSegment, opossum::DictionarySegment>("string", vc_str);
+  auto dict_col = std::dynamic_pointer_cast<opossum::DictionarySegment<std::string>>(col);
 
-    // Test sorted ordered dictionary and get the value at given valueID
-    EXPECT_EQ(dict_col->value_by_value_id((opossum::ValueID)0), "Alexander");
-    EXPECT_EQ(dict_col->value_by_value_id((opossum::ValueID)1), "Bill");
-    EXPECT_EQ(dict_col->value_by_value_id((opossum::ValueID)2), "Hasso");
-    EXPECT_EQ(dict_col->value_by_value_id((opossum::ValueID)3), "Steve");
+  // Test sorted ordered dictionary and get the value at given valueID
+  EXPECT_EQ(dict_col->value_by_value_id((opossum::ValueID)0), "Alexander");
+  EXPECT_EQ(dict_col->value_by_value_id((opossum::ValueID)1), "Bill");
+  EXPECT_EQ(dict_col->value_by_value_id((opossum::ValueID)2), "Hasso");
+  EXPECT_EQ(dict_col->value_by_value_id((opossum::ValueID)3), "Steve");
 }
