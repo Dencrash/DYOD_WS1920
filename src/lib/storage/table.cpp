@@ -55,11 +55,6 @@ void Table::create_new_chunk() {
   // Implementation goes here
 }
 
-uint16_t Table::column_count() const {
-  // Implementation goes here
-  return 0;
-}
-
 bool Table::is_new_chunk_needed() { return _chunks.back()->size() >= _max_chunk_size; }
 
 uint16_t Table::column_count() const { return _column_names.size(); }
