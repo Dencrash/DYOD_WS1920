@@ -45,13 +45,11 @@ std::vector<std::string> StorageManager::table_names() const {
 
 void StorageManager::print(std::ostream& out) const {
   for (auto pair : _tables) {
-    out << pair.first << " | " << pair.second->column_count() << " | "
-        << pair.second->row_count() << " | " << pair.second->chunk_count();
+    out << pair.first << " | " << pair.second->column_count() << " | " << pair.second->row_count() << " | "
+        << pair.second->chunk_count();
   }
 }
 
-void StorageManager::reset() {
-  _tables.clear();
-}
+void StorageManager::reset() { _tables.clear(); }
 
 }  // namespace opossum

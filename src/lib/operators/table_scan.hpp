@@ -18,16 +18,39 @@ class Table;
 class TableScan : public AbstractOperator {
  public:
   TableScan(const std::shared_ptr<const AbstractOperator> in, ColumnID column_id, const ScanType scan_type,
-            const AllTypeVariant search_value);
+            const AllTypeVariant search_value) {
+    //this->input_right();
+    this->_column_id = column_id;
+    this->_scan_type = scan_type;
+    this->_search_value = search_value;
+  }
 
   ~TableScan();
 
-  ColumnID column_id() const;
-  ScanType scan_type() const;
-  const AllTypeVariant& search_value() const;
+  ColumnID column_id() const { return _column_id; }
+
+  ScanType scan_type() const { return _scan_type; }
+
+  const AllTypeVariant& search_value() const { return _search_value; }
 
  protected:
   std::shared_ptr<const Table> _on_execute() override;
+  ColumnID _column_id;
+  ScanType _scan_type;
+  AllTypeVariant _search_value;
+
+  template <typename T>
+  class BaseTableScanImpl : public AbstractOperator {
+   public:
+    void make_unique_by_column_type(std::shared_ptr<BaseSegment> base_segment) const {
+      auto pointer_cast = std::dynamic_pointer_cast<BaseSegment>(base_segment);
+    }
+
+    const T& search_value() const { return type_cast<T>(_search_value); }
+
+   protected:
+    AllTypeVariant _search_value;
+  };
 };
 
 }  // namespace opossum

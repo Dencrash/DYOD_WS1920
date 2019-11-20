@@ -90,8 +90,6 @@ void Table::compress_chunk(ChunkID chunk_id) {
   DebugAssert(chunk_id < _chunks.size(), "ChunkID out of range");
   const auto chunk = _chunks[chunk_id];
   auto compressed_chunk = std::make_shared<Chunk>();
-  // create new empty chunk
-  _chunks.push_back(compressed_chunk);
 
   // number of threads needed
   auto n_columns = chunk->column_count();

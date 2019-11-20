@@ -8,6 +8,7 @@
 #include "gtest/gtest.h"
 
 #include "../lib/resolve_type.hpp"
+#include "../lib/storage/dictionary_segment.hpp"
 #include "../lib/storage/table.hpp"
 
 namespace opossum {
@@ -71,12 +72,15 @@ TEST_F(StorageTableTest, GetColumnIdByName) {
 
 TEST_F(StorageTableTest, GetChunkSize) { EXPECT_EQ(t.max_chunk_size(), 2u); }
 
-
-
 TEST_F(StorageTableTest, CompressChunk) {
   t.append({4, "12"});
   t.compress_chunk(ChunkID{0});
-//  EXPECT_THROW(t.compress_chunk(ChunkID{2}), std::exception);
+  auto int_seg = std::dynamic_pointer_cast<DictionarySegment<int>>(t.get_chunk(ChunkID{0}).get_segment(ColumnID{0}));
+  EXPECT_EQ(int_seg->get(0), 4);
+  auto string_seg =
+      std::dynamic_pointer_cast<DictionarySegment<std::string>>(t.get_chunk(ChunkID{0}).get_segment(ColumnID{1}));
+  EXPECT_EQ(string_seg->get(0), "12");
+  EXPECT_THROW(t.compress_chunk(ChunkID{2}), std::exception);
 }
 
 }  // namespace opossum
