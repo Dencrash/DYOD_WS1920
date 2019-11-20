@@ -15,6 +15,7 @@
 #include "base_attribute_vector.hpp"
 #include "base_segment.hpp"
 #include "fixed_size_attribute_vector.hpp"
+#include "value_segment.hpp"
 
 namespace opossum {
 
@@ -42,8 +43,9 @@ class DictionarySegment : public BaseSegment {
 
     _set_attribute_vector(_dictionary->size(), base_segment->size());
 
+    auto values = std::dynamic_pointer_cast<ValueSegment<T>>(base_segment)->values();
     for (size_t segment_index = 0; segment_index < base_segment->size(); ++segment_index) {
-      T current_attribute_value = type_cast<T>((*base_segment)[segment_index]);
+      T current_attribute_value = values[segment_index];
       auto dict_iterator = std::lower_bound(_dictionary->begin(), _dictionary->end(), current_attribute_value);
       // The index before the upper bound includes the correct element
       auto dict_index = static_cast<uint32_t>(std::distance(_dictionary->begin(), dict_iterator));
