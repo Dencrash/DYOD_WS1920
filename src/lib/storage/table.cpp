@@ -19,8 +19,7 @@
 
 namespace opossum {
 
-Table::Table(const uint32_t chunk_size) {
-  _max_chunk_size = chunk_size;
+Table::Table(const uint32_t chunk_size) : _max_chunk_size(chunk_size){
   _chunks.push_back(std::make_shared<Chunk>());
 }
 
@@ -83,32 +82,30 @@ const Chunk& Table::get_chunk(ChunkID chunk_id) const { return *_chunks.at(chunk
 void Table::compress_chunk(ChunkID chunk_id) {
   DebugAssert(chunk_id < _chunks.size(), "ChunkID out of range");
   const auto chunk = _chunks[chunk_id];
+
+  // create new empty chunk  
   auto compressed_chunk = std::make_shared<Chunk>();
-  // create new empty chunk
-  _chunks.push_back(compressed_chunk);
 
   // number of threads needed
   auto n_columns = chunk->column_count();
-  std::vector<std::thread> threads(n_columns);
+  std::vector<std::thread> threads;
+  threads.reserve(n_columns);
   std::vector<std::shared_ptr<BaseSegment>> dictionary_segments(n_columns);
-  // to enable threads to access specific position in vector
-  dictionary_segments.resize(n_columns);
 
-  for (size_t segment = 0; segment < dictionary_segments.size(); ++segment) {
-    threads.push_back(std::thread([&] (size_t seg) {
-        std::string data_type = column_type((ColumnID) seg);
-        std::shared_ptr<BaseSegment> current_segment = chunk->get_segment((ColumnID) seg);
+  for (size_t segment_index = 0; segment_index < dictionary_segments.size(); ++segment_index) {
+    auto segment = chunk->get_segment(static_cast<ColumnID>(segment_index));
+    auto segment_type = column_type(static_cast<ColumnID>(segment_index));
+    threads.emplace_back(std::thread([&dictionary_segments] (size_t segment_index, auto segment, auto type) {
         auto compressed_chunk = make_shared_by_data_type<BaseSegment, DictionarySegment>
-                        (data_type, current_segment);
+                        (type, segment);
 
-        dictionary_segments[seg] = compressed_chunk;
-    }, segment));
+        dictionary_segments[segment_index] = compressed_chunk;
+
+    }, segment_index, segment, segment_type));
   }
 
-  for (size_t thread=0; thread < threads.size(); thread++) {
-    if (threads[thread].joinable()) {
-      threads[thread].join();
-    }
+  for (size_t thread_index = 0; thread_index < threads.size(); ++thread_index) {
+    threads[thread_index].join();
   }
 
   for (int segment = 0; segment < n_columns; ++segment) {

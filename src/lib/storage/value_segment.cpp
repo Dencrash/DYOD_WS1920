@@ -42,6 +42,6 @@ size_t ValueSegment<T>::estimate_memory_usage() const {
     return num_entries * data_type_size;
 }
 
-    EXPLICITLY_INSTANTIATE_DATA_TYPES(ValueSegment);
+EXPLICITLY_INSTANTIATE_DATA_TYPES(ValueSegment);
 
 }  // namespace opossum

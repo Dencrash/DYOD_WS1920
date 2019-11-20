@@ -15,7 +15,8 @@ StorageManager& StorageManager::get() {
 }
 
 void StorageManager::add_table(const std::string& name, std::shared_ptr<Table> table) {
-  _tables.insert_or_assign(name, table);
+  auto insert_result = _tables.insert({ name, table });
+  DebugAssert(insert_result.second, "Tablename already exists.");
 }
 
 void StorageManager::drop_table(const std::string& name) {
@@ -37,8 +38,9 @@ bool StorageManager::has_table(const std::string& name) const {
 
 std::vector<std::string> StorageManager::table_names() const {
   std::vector<std::string> names;
+  names.reserve(_tables.size());
   for (auto pair : _tables) {
-    names.push_back(pair.first);
+    names.emplace_back(pair.first);
   }
   return names;
 }
