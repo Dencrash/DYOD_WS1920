@@ -14,14 +14,11 @@ template <typename T>
 class FixedSizeAttributeVector : public BaseAttributeVector {
  public:
   // Create a FixedSizeAttributeVector that is already resized depending on the number of elements
-  explicit FixedSizeAttributeVector(const size_t number_of_elements) {
-    _attribute_storage.resize(number_of_elements);
-  }
-  ~FixedSizeAttributeVector() override {};
+  explicit FixedSizeAttributeVector(const size_t number_of_elements) : _attribute_storage(number_of_elements) {};
 
   // return the ValueID at a given position
   ValueID get(const size_t i) const override {
-    return (ValueID) _attribute_storage.at(i);
+    return static_cast<ValueID>(_attribute_storage.at(i));
   };
 
   // sets the value id at a given position

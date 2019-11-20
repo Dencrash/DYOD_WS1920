@@ -15,6 +15,7 @@
 #include "fixed_size_attribute_vector.hpp"
 #include "type_cast.hpp"
 #include "types.hpp"
+#include "value_segment.hpp"
 
 namespace opossum {
 
@@ -32,27 +33,26 @@ class DictionarySegment : public BaseSegment {
   /**
    * Creates a Dictionary segment from a given value segment.
    */
-  explicit DictionarySegment(const std::shared_ptr<BaseSegment>& base_segment)
-      : _dictionary(std::make_shared<std::vector<T>>()) {
-    size_t attribute_vector_size = 0;
+  explicit DictionarySegment(const std::shared_ptr<BaseSegment>& base_segment) :
+  _dictionary(std::make_shared<std::vector<T>>()) {
     std::set<T> dictionary_helper;
-    for (size_t segment_iterator = 0; segment_iterator < base_segment->size(); ++segment_iterator) {
-      dictionary_helper.insert(type_cast<T>((*base_segment)[segment_iterator]));
-      attribute_vector_size++;
+    for (size_t segment_index = 0; segment_index < base_segment->size(); ++segment_index) {
+      dictionary_helper.insert(type_cast<T>((*base_segment)[segment_index]));
     }
     _dictionary->reserve(dictionary_helper.size());
     for (auto it = dictionary_helper.begin(); it != dictionary_helper.end();) {
       _dictionary->emplace_back(std::move(dictionary_helper.extract(it++).value()));
     }
 
-    _set_attribute_vector(_dictionary->size(), attribute_vector_size);
+    _set_attribute_vector(_dictionary->size(), base_segment->size());
 
-    for (size_t segment_iterator = 0; segment_iterator < base_segment->size(); ++segment_iterator) {
-      T current_attribute_value = type_cast<T>((*base_segment)[segment_iterator]);
-      auto dict_memory_address = std::upper_bound(_dictionary->begin(), _dictionary->end(), current_attribute_value);
+    auto values = std::dynamic_pointer_cast<ValueSegment<T>>(base_segment)->values();
+    for (size_t segment_index = 0; segment_index < base_segment->size(); ++segment_index) {
+      T current_attribute_value = values[segment_index];
+      auto dict_iterator = std::lower_bound(_dictionary->begin(), _dictionary->end(), current_attribute_value);
       // The index before the upper bound includes the correct element
-      auto dict_index = static_cast<uint32_t>(std::distance(_dictionary->begin(), dict_memory_address) - 1);
-      _attribute_vector->set(segment_iterator, static_cast<ValueID>(dict_index));
+      auto dict_index = static_cast<uint32_t>(std::distance(_dictionary->begin(), dict_iterator));
+      _attribute_vector->set(segment_index, static_cast<ValueID>(dict_index));
     }
   }
 
@@ -61,14 +61,14 @@ class DictionarySegment : public BaseSegment {
 
   // return the value at a certain position. If you want to write efficient operators, back off!
   AllTypeVariant operator[](const ChunkOffset chunk_offset) const override {
-    auto helper = _attribute_vector->get(chunk_offset);
-    return (*_dictionary)[helper];
+    auto dictionary_index = _attribute_vector->get(chunk_offset);
+    return (*_dictionary)[dictionary_index];
   }
 
   // return the value at a certain position.
   T get(const size_t chunk_offset) const {
-    auto helper = _attribute_vector->get(chunk_offset);
-    return _dictionary->at(helper);
+    auto dictionary_index = _attribute_vector->get(chunk_offset);
+    return _dictionary->at(dictionary_index);
   }
 
   // dictionary segments are immutable
@@ -88,8 +88,8 @@ class DictionarySegment : public BaseSegment {
   // returns the first value ID that refers to a value >= the search value
   // returns INVALID_VALUE_ID if all values are smaller than the search value
   ValueID lower_bound(T value) const {
-    auto result_memory_address = std::lower_bound(_dictionary->begin(), _dictionary->end(), value);
-    auto result = static_cast<ValueID>(std::distance(_dictionary->begin(), result_memory_address));
+    auto result_iterator = std::lower_bound(_dictionary->begin(), _dictionary->end(), value);
+    auto result = static_cast<ValueID>(std::distance(_dictionary->begin(), result_iterator));
     if (result == _dictionary->size()) {
       return INVALID_VALUE_ID;
     }
@@ -102,8 +102,8 @@ class DictionarySegment : public BaseSegment {
   // returns the first value ID that refers to a value > the search value
   // returns INVALID_VALUE_ID if all values are smaller than or equal to the search value
   ValueID upper_bound(T value) const {
-    auto result_memory_address = std::upper_bound(_dictionary->begin(), _dictionary->end(), value);
-    auto result = static_cast<ValueID>(std::distance(_dictionary->begin(), result_memory_address));
+    auto result_iterator = std::upper_bound(_dictionary->begin(), _dictionary->end(), value);
+    auto result = static_cast<ValueID>(std::distance(_dictionary->begin(), result_iterator));
     if (result == _dictionary->size()) {
       return INVALID_VALUE_ID;
     }
@@ -120,7 +120,7 @@ class DictionarySegment : public BaseSegment {
   size_t size() const override { return _attribute_vector->size(); }
 
   // returns the calculated memory usage of the segment
-  size_t estimate_memory_usage() const {
+  size_t estimate_memory_usage() const override {
     auto dic_size = _dictionary->size() * sizeof(T);
     auto att_size = _attribute_vector->size() * _attribute_vector->width();
 
