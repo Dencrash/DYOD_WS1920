@@ -38,3 +38,5 @@ cmake-build-*
 # llvm coverage information
 default.profdata
 default.profraw
+
+/src/bin/playground.cpp

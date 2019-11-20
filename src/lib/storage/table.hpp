@@ -5,6 +5,7 @@
 #include <memory>
 #include <mutex>
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -76,7 +77,20 @@ class Table : private Noncopyable {
   // note this is slow and not thread-safe and should be used for testing purposes only
   void append(std::vector<AllTypeVariant> values);
 
+  // compresses a ValueColumn into a DictionaryColumn
+  void compress_chunk(ChunkID chunk_id);
+
  protected:
-  // Implementation goes here
+  uint32_t _max_chunk_size;
+  std::vector<std::shared_ptr<Chunk>> _chunks;
+  std::vector<std::string> _column_names;
+  std::vector<std::string> _column_types;
+  std::unordered_map<std::string, ColumnID> _column_name_mapping;
+
+  // check if the latest chunk has reached the maximum size
+  bool is_new_chunk_needed();
+
+  // check if the table is currently empty
+  bool is_empty();
 };
 }  // namespace opossum
