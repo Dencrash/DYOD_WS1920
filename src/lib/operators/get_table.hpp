@@ -16,21 +16,15 @@ class GetTable : public AbstractOperator {
   StorageManager& storage = StorageManager::get();
 
   explicit GetTable(const std::string& name) {
-    this->_table_name = name;
-    _on_execute();
+    if (storage.has_table(name)) {
+      this->_table_name = name;
+    }
   }
 
   const std::string& table_name() const { return _table_name; }
 
  protected:
-  std::shared_ptr<const Table> _on_execute() override {
-    bool table_exist = storage.has_table(_table_name);
-    //DebugAssert(!table_exist, "The executed tablename does not exist.");
-    if (table_exist) {
-      return storage.get_table(_table_name);
-    }
-    return nullptr;
-  }
+  std::shared_ptr<const Table> _on_execute() override { return storage.get_table(_table_name); }
 
   std::string _table_name;
 };

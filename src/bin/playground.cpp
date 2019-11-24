@@ -9,27 +9,27 @@ int main() {
   opossum::Assert(true, "We can use opossum files here :)");
   std::cout << "+++++++++++++ Starting playground: +++++++++++++" << std::endl;
 
-  // Create table with one entry
+  std::string table_name = "first_table";
+  // Create singleton
   auto& sm = opossum::StorageManager::get();
-  auto t1 = std::make_shared<opossum::Table>();
-  auto t2 = std::make_shared<opossum::Table>(4);
+  // Create table with no entry and with one entry
+  std::shared_ptr<opossum::Table> t1 = std::make_shared<opossum::Table>(2);
 
-  sm.add_table("first_table", t1);
-  sm.add_table("second_table", t2);
-
-  auto t3 = sm.get_table("first_table");
-  auto t4 = sm.get_table("second_table");
-
-  std::cout << "Table One = " << &t3;
-  std::cout << " && Table Two = " << &t4 << std::endl;
-
-  opossum::GetTable table("first_table");
-  std::string t5 = table.table_name();
-
-  std::cout << " table_name " << t5 << std::endl;
-  ;
+  // Add table to storage manager
+  sm.add_table(table_name, t1);
 
   // Get table from StorageManager by tablename
+  bool hasTable = sm.has_table(table_name);
+
+  std::cout << "Table with given table_name exist= " << hasTable << std::endl;
+
+  opossum::GetTable table(table_name);
+  std::string t5 = table.table_name();
+  std::cout << " table_name= " << t5 << std::endl;
+
+  auto gt = std::make_shared<opossum::GetTable>(t5);
+  gt->execute();
+  std::cout << gt->get_output() << std::endl;
 
   return 0;
 }

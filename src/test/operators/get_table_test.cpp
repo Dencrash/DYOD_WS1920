@@ -26,10 +26,10 @@ TEST_F(OperatorsGetTableTest, GetOutput) {
   EXPECT_EQ(gt->get_output(), _test_table);
 }
 
-// TEST_F(OperatorsGetTableTest, ThrowsUnknownTableName) {
-//   auto gt = std::make_shared<GetTable>("anUglyTestTable");
+TEST_F(OperatorsGetTableTest, ThrowsUnknownTableName) {
+  auto gt = std::make_shared<GetTable>("anUglyTestTable");
 
-//   EXPECT_THROW(gt->execute(), std::exception) << "Should throw unknown table name exception";
-// }
+  EXPECT_THROW(gt->execute(), std::exception) << "Should throw unknown table name exception";
+}
 
 }  // namespace opossum
