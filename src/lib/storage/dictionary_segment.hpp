@@ -16,6 +16,7 @@
 #include "type_cast.hpp"
 #include "types.hpp"
 #include "value_segment.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 
