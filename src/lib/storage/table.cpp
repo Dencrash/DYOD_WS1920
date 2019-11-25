@@ -24,16 +24,16 @@ Table::Table(const uint32_t chunk_size) : _max_chunk_size(chunk_size){
 }
 
 void Table::add_column_definition(const std::string& name, const std::string& type) {
-  // Implementation goes here
-}
-
-void Table::add_column(const std::string& name, const std::string& type) {
-  DebugAssert(this->is_empty(), "Columns may only be added to an empty table.");
   auto search = _column_name_mapping.find(name);
   DebugAssert(search == _column_name_mapping.end(), "Column names may not be duplicated");
   _column_name_mapping.insert({name, (ColumnID)_column_names.size()});
   _column_names.push_back(name);
   _column_types.push_back(type);
+}
+
+void Table::add_column(const std::string& name, const std::string& type) {
+  DebugAssert(this->is_empty(), "Columns may only be added to an empty table.");
+  add_column_definition(name, type);
   auto segment = make_shared_by_data_type<BaseSegment, ValueSegment>(type);
   _chunks.front()->add_segment(segment);
 }
@@ -41,17 +41,17 @@ void Table::add_column(const std::string& name, const std::string& type) {
 void Table::append(std::vector<AllTypeVariant> values) {
   // Check if the latest Chunk has already reached maximum size and create a new one if necessary
   if (this->is_new_chunk_needed()) {
-    _chunks.push_back(std::make_shared<Chunk>());
-    for (auto type_name : _column_types) {
-      auto segment = make_shared_by_data_type<BaseSegment, ValueSegment>(type_name);
-      _chunks.back()->add_segment(segment);
-    }
+    create_new_chunk();
   }
   _chunks.back()->append(values);
 }
 
 void Table::create_new_chunk() {
-  // Implementation goes here
+  _chunks.push_back(std::make_shared<Chunk>());
+  for (auto type_name : _column_types) {
+    auto segment = make_shared_by_data_type<BaseSegment, ValueSegment>(type_name);
+    _chunks.back()->add_segment(segment);
+  }
 }
 
 bool Table::is_new_chunk_needed() { return _chunks.back()->size() >= _max_chunk_size; }
@@ -121,8 +121,14 @@ void Table::compress_chunk(ChunkID chunk_id) {
   _chunks[chunk_id] = std::move(compressed_chunk);
 }
 
-void emplace_chunk(Chunk chunk) {
-  // Implementation goes here
+void Table::emplace_chunk(Chunk chunk) {
+  if (_chunks.front()->size()) {
+    _chunks.emplace_back(std::make_shared<Chunk>());
+  }
+  else {
+    auto chunk_ptr = std::make_shared<Chunk>(std::move(chunk));
+    _chunks.front() = std::move(chunk_ptr);
+  }
 }
 
 }  // namespace opossum
