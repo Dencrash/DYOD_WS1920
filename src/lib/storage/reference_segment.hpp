@@ -34,6 +34,14 @@ class ReferenceSegment : public BaseSegment {
   const std::shared_ptr<const Table> referenced_table() const;
 
   ColumnID referenced_column_id() const;
+
+  size_t estimate_memory_usage() const override;
+
+ protected:
+  const std::shared_ptr<const Table> _referenced_table;
+  const std::shared_ptr<const PosList> _position_list;
+
+  const ColumnID _referenced_column;
 };
 
 }  // namespace opossum
