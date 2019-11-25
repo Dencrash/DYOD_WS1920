@@ -127,7 +127,7 @@ void Table::emplace_chunk(Chunk chunk) {
   }
   else {
     auto chunk_ptr = std::make_shared<Chunk>(std::move(chunk));
-    _chunks[0] = std::move(chunk_ptr);
+    _chunks.front() = std::move(chunk_ptr);
   }
 }
 
