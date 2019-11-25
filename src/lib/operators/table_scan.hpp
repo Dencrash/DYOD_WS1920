@@ -21,7 +21,7 @@ class TableScan : public AbstractOperator {
   TableScan(const std::shared_ptr<const AbstractOperator> in, ColumnID column_id, const ScanType scan_type,
             const AllTypeVariant search_value) : AbstractOperator(in, in), _column_id(column_id), _scan_type(scan_type), _search_value(search_value) {}
 
-  ~TableScan();
+  ~TableScan() {}
 
   ColumnID column_id() const { return _column_id; }
 
@@ -46,24 +46,35 @@ class TableScan : public AbstractOperator {
     const ScanType _scan_type;
     const ColumnID _column_id;
     const T _search_value;
+    std::function<bool(const T&)> _compare_function;
 
 
     std::shared_ptr<const Table> _on_execute() {
+      _compare_function = _create_compare_function();
       auto table = _input_table_left();
+      auto referenced_table = table;
       auto chunk_count = table->chunk_count();
       auto column_count = table->column_count();
       auto full_position_list = std::make_shared<PosList>();
 
-      for (ChunkID chunk_index{0}; chunk_index < chunk_count; ++chunk_index) {
-        auto position_list = _scan_chunk(table->get_chunk(chunk_index), chunk_index);
+      for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
+        auto& chunk = table->get_chunk(chunk_id);
+        if (!chunk.size()) {
+          continue;
+        }
+        auto position_list = _scan_chunk(chunk, chunk_id);
         full_position_list->insert(full_position_list->end(), position_list->begin(), position_list->end());
       }
 
       Chunk new_chunk;
 
+      if (auto reference_segment = std::dynamic_pointer_cast<ReferenceSegment>(table->get_chunk(ChunkID{0}).get_segment(_column_id))) {
+        referenced_table = reference_segment->referenced_table();
+      }
+
       for (auto column_index = 0; column_index < column_count; ++column_index) {
           // Remember to change referenced table in case of reference segment
-          new_chunk.add_segment(std::make_shared<ReferenceSegment>(ReferenceSegment(table, (ColumnID) column_index, full_position_list)));
+          new_chunk.add_segment(std::make_shared<ReferenceSegment>(ReferenceSegment(referenced_table, (ColumnID) column_index, full_position_list)));
       }
 
       auto new_table = std::make_shared<Table>(); 
@@ -73,33 +84,69 @@ class TableScan : public AbstractOperator {
 
     std::shared_ptr<const PosList> _scan_chunk(const Chunk& chunk, ChunkID chunk_id) {
       if (const auto value_segment = std::dynamic_pointer_cast<ValueSegment<T>>(chunk.get_segment(_column_id))) {
-        auto compare_function = _create_compare_function();
-        return _scan_value_segment(value_segment, chunk_id, compare_function);
+        return _scan_value_segment(value_segment, chunk_id);
       } else if (auto reference_segment = std::dynamic_pointer_cast<ReferenceSegment>(chunk.get_segment(_column_id))) {
-          return _scan_reference_segment(reference_segment, chunk_id);
+        return _scan_reference_segment(reference_segment, chunk_id);
       } else if (auto dictionary_segment = std::dynamic_pointer_cast<DictionarySegment<T>>(chunk.get_segment(_column_id))) {
-          return _scan_dictionary_segment(dictionary_segment, chunk_id);
+        return _scan_dictionary_segment(dictionary_segment, chunk_id);
       } else {
-          throw std::runtime_error("Segment Type does not match search type");
+        throw std::runtime_error("Segment Type does not match search type");
       }
     }
 
     std::shared_ptr<const PosList> _scan_dictionary_segment(std::shared_ptr<DictionarySegment<T>> segment, ChunkID chunk_id) {
       PosList position_list;
+      auto segment_size = segment->size();
+      for (size_t row_index = 0; row_index < segment_size; ++row_index) {
+        if (_compare_function(segment->get((ChunkOffset) row_index))) {
+          position_list.push_back(RowID{chunk_id, (ChunkOffset) row_index});
+        }
+      }
       return std::make_shared<const PosList>(position_list);
     }
 
     std::shared_ptr<const PosList> _scan_reference_segment(std::shared_ptr<ReferenceSegment> segment, ChunkID chunk_id) {
       PosList position_list;
+      auto referenced_table = segment->referenced_table();
+      auto referenced_position_list = segment->pos_list();
+      ChunkID current_chunk_id = referenced_table->chunk_count();
+      std::shared_ptr<ValueSegment<T>> value_segment;
+      std::shared_ptr<DictionarySegment<T>> dictionary_segment;
+      bool is_value_segment = false;
+
+      for (const auto& row_id: position_list) {
+        if (current_chunk_id != row_id.chunk_id) {
+          if ((value_segment = std::dynamic_pointer_cast<ValueSegment<T>>(referenced_table->get_chunk(row_id.chunk_id).get_segment(_column_id)))) {
+            is_value_segment = true;
+          } else if ((dictionary_segment = std::dynamic_pointer_cast<DictionarySegment<T>>(referenced_table->get_chunk(row_id.chunk_id).get_segment(_column_id)))) {
+            is_value_segment = false;
+          } else {
+            throw std::runtime_error("Segment Type does not match search type");
+          }
+        }
+
+        if (is_value_segment) {
+          if (_compare_function(type_cast<T>((*value_segment)[row_id.chunk_offset]))) {
+            position_list.push_back(RowID{row_id.chunk_id, row_id.chunk_offset});
+          }
+        } else {
+          if (_compare_function(dictionary_segment->get(row_id.chunk_offset))) {
+            position_list.push_back(RowID{row_id.chunk_id, row_id.chunk_offset});
+          }
+
+        }
+        
+      }
+
       return std::make_shared<const  PosList>(position_list);
     }
 
-    std::shared_ptr<const PosList> _scan_value_segment(std::shared_ptr<ValueSegment<T>> segment, ChunkID chunk_id, std::function<bool(const T&)> comparator) {
+    std::shared_ptr<const PosList> _scan_value_segment(std::shared_ptr<ValueSegment<T>> segment, ChunkID chunk_id) {
       PosList position_list;
       auto values = segment->values();
       auto values_size = values.size();
       for (uint32_t value_index = 0; value_index < values_size; ++value_index) {
-        if (comparator(values[value_index])) {
+        if (_compare_function(values[value_index])) {
           position_list.push_back(RowID{chunk_id, value_index});
         }
       }
