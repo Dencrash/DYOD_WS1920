@@ -56,11 +56,15 @@ void Table::create_new_chunk() {
 
 bool Table::is_new_chunk_needed() { return _chunks.back()->size() >= _max_chunk_size; }
 
-uint16_t Table::column_count() const { return _column_names.size(); }
+uint16_t Table::column_count() const { return _chunks.back()->column_count(); }
 
 uint64_t Table::row_count() const {
+  uint64_t sum = 0;
   // Since we cannot delete data, all old chunks will have maximum chunk size
-  return ((_chunks.size() - 1) * _max_chunk_size) + _chunks.back()->size();
+  for (const auto& chunk: _chunks) {
+    sum += chunk->size();
+  }
+  return sum;
 }
 
 ChunkID Table::chunk_count() const { return (ChunkID)_chunks.size(); }

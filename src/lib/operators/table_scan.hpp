@@ -68,17 +68,23 @@ class TableScan : public AbstractOperator {
 
       Chunk new_chunk;
 
+
       if (auto reference_segment = std::dynamic_pointer_cast<ReferenceSegment>(table->get_chunk(ChunkID{0}).get_segment(_column_id))) {
         referenced_table = reference_segment->referenced_table();
       }
+
 
       for (auto column_index = 0; column_index < column_count; ++column_index) {
           // Remember to change referenced table in case of reference segment
           new_chunk.add_segment(std::make_shared<ReferenceSegment>(ReferenceSegment(referenced_table, (ColumnID) column_index, full_position_list)));
       }
 
-      auto new_table = std::make_shared<Table>(); 
+
+      auto new_table = std::make_shared<Table>();
       new_table->emplace_chunk(std::move(new_chunk));
+      for (auto column_index = 0; column_index < column_count; ++column_index) {
+        new_table->add_column_definition(table->column_name(ColumnID{column_index}), table->column_type(ColumnID{column_index}));
+      }
       return new_table;
     }
 
@@ -114,7 +120,7 @@ class TableScan : public AbstractOperator {
       std::shared_ptr<DictionarySegment<T>> dictionary_segment;
       bool is_value_segment = false;
 
-      for (const auto& row_id: position_list) {
+      for (const auto& row_id: *referenced_position_list) {
         if (current_chunk_id != row_id.chunk_id) {
           if ((value_segment = std::dynamic_pointer_cast<ValueSegment<T>>(referenced_table->get_chunk(row_id.chunk_id).get_segment(_column_id)))) {
             is_value_segment = true;
