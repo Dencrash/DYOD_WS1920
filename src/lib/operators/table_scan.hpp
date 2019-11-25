@@ -96,10 +96,10 @@ class TableScan : public AbstractOperator {
 
     std::shared_ptr<const PosList> _scan_value_segment(std::shared_ptr<ValueSegment<T>> segment, ChunkID chunk_id, std::function<bool(const T&)> comparator) {
       PosList position_list;
-      auto values = segment->values();
-      auto values_size = values.size();
+      auto values = std::make_shared<std::vector<T>>(segment->values());
+      auto values_size = values->size();
       for (uint32_t value_index = 0; value_index < values_size; ++value_index) {
-        if (comparator(values[value_index])) {
+        if (comparator((*values)[value_index])) {
           position_list.push_back(RowID{chunk_id, value_index});
         }
       }
