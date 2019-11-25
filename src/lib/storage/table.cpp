@@ -121,8 +121,14 @@ void Table::compress_chunk(ChunkID chunk_id) {
   _chunks[chunk_id] = std::move(compressed_chunk);
 }
 
-void emplace_chunk(Chunk chunk) {
-  // Implementation goes here
+void Table::emplace_chunk(Chunk chunk) {
+  if (_chunks.front()->size()) {
+    _chunks.emplace_back(std::make_shared<Chunk>());
+  }
+  else {
+    auto chunk_ptr = std::make_shared<Chunk>(std::move(chunk));
+    _chunks[0] = std::move(chunk_ptr);
+  }
 }
 
 }  // namespace opossum
