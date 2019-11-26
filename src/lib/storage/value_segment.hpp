@@ -27,8 +27,14 @@ class ValueSegment : public BaseSegment {
   // e.g. const auto& values = value_segment.values(); and then: values[i]; in your loop.
   const std::vector<T>& values() const;
 
+  // returns the calculated memory usage
+  size_t estimate_memory_usage() const override;  // mit final hinter const -> schlägt fehl
+
+  // returns the estimated memory usage from an element of type T
+  size_t estimate_memory_usage_per_element() const override;
+
  protected:
-  // Implementation goes here
+  std::vector<T> _values;
 };
 
 }  // namespace opossum
