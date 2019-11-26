@@ -72,9 +72,10 @@ class TableScan : public AbstractOperator {
     // executes the Scan on all chunks of the table for the given segment
     std::shared_ptr<const Table> _on_execute() {
       _compare_function = _create_compare_function();
-      auto table = _input_table_left();
-      auto chunk_count = table->chunk_count();
-      auto column_count = table->column_count();
+
+      const auto table = _input_table_left();
+      const auto chunk_count = table->chunk_count();
+      const auto column_count = table->column_count();
       auto full_position_list = std::make_shared<PosList>();
 
       for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
@@ -136,13 +137,13 @@ class TableScan : public AbstractOperator {
     // returns the position_list extended with all elements that fullfil the condition for the given DictionarySegment
     std::shared_ptr<PosList> _scan_dictionary_segment(std::shared_ptr<DictionarySegment<T>> segment,
                                                             ChunkID chunk_id, std::shared_ptr<PosList> position_list) {
-      auto attribute_vector = segment->attribute_vector();
+      const auto attribute_vector = segment->attribute_vector();
 
       // The comparator will evaluate, if the given ValueID fullfils our scan condition
       // note: you can find the definition and explanations to the function at the relevant method implementation
-      std::function<bool(const ValueID&)> comparator = _create_relevant_dictionary_compare(segment);
+      const std::function<bool(const ValueID&)> comparator = _create_relevant_dictionary_compare(segment);
 
-      auto attribute_vector_size = attribute_vector->size();
+      const auto attribute_vector_size = attribute_vector->size();
       for (size_t row_index = 0; row_index < attribute_vector_size; ++row_index) {
         // Add all elements from the attribute vector with a ValueID that fullfils the comparator
         if (comparator(attribute_vector->get(row_index))) {
@@ -158,8 +159,8 @@ class TableScan : public AbstractOperator {
     // the pos_list in Chunk order.
     std::shared_ptr<PosList> _scan_reference_segment(std::shared_ptr<ReferenceSegment> segment,
                                                            ChunkID chunk_id, std::shared_ptr<PosList> position_list) {
-      auto referenced_table = segment->referenced_table();
-      auto referenced_position_list = segment->pos_list();
+      const auto referenced_table = segment->referenced_table();
+      const auto referenced_position_list = segment->pos_list();
       // Initialize with the first ChunkID that will be unavailable
       ChunkID current_chunk_id = referenced_table->chunk_count();
 
@@ -181,11 +182,13 @@ class TableScan : public AbstractOperator {
           if ((value_segment = std::dynamic_pointer_cast<ValueSegment<T>>(
                    referenced_table->get_chunk(row_id.chunk_id).get_segment(_column_id)))) {
             values = value_segment->values();
+            current_chunk_id = row_id.chunk_id;
             is_value_segment = true;
           } else if ((dictionary_segment = std::dynamic_pointer_cast<DictionarySegment<T>>(
                           referenced_table->get_chunk(row_id.chunk_id).get_segment(_column_id)))) {
             attribute_vector = dictionary_segment->attribute_vector();
             comparator = _create_relevant_dictionary_compare(dictionary_segment);
+            current_chunk_id = row_id.chunk_id;
             is_value_segment = false;
           } else {
             throw std::runtime_error("Segment Type does not match search type");
@@ -210,8 +213,8 @@ class TableScan : public AbstractOperator {
     // returns the position_list with all elements that fullfil the condition in the given ValueSegment
     std::shared_ptr<PosList> _scan_value_segment(std::shared_ptr<ValueSegment<T>> segment, ChunkID chunk_id,
                                                   std::shared_ptr<PosList> position_list) {
-      auto values = std::make_shared<std::vector<T>>(segment->values());
-      auto values_size = values->size();
+      const auto values = std::make_shared<std::vector<T>>(segment->values());
+      const auto values_size = values->size();
       for (uint32_t value_index = 0; value_index < values_size; ++value_index) {
         // Use the _compare_function that was previously producted against our values
         // You can find the definition of this _compare_function in the method _create_compare_function
@@ -251,7 +254,7 @@ class TableScan : public AbstractOperator {
                                           std::shared_ptr<DictionarySegment<T>> dictionary) {
       // Gain the first ValueID that is greater or equal to our given _search_value.
       // We then use this ValueID in the created function depending on the ScanType
-      ValueID relevant_value_id = dictionary->lower_bound(_search_value);
+      const ValueID relevant_value_id = dictionary->lower_bound(_search_value);
       switch (_scan_type) {
         case ScanType::OpEquals:
           // There can only be a maximum of one ValueID equal to the _search_value
@@ -266,7 +269,7 @@ class TableScan : public AbstractOperator {
           if (relevant_value_id != INVALID_VALUE_ID) {
             // If we find a ValueId we need to check, if its equal to our _search_value and
             // have our comparator either look for smaller or smaller and equal ValueIDs, respectively
-            auto value = dictionary->value_by_value_id(relevant_value_id);
+            const auto value = dictionary->value_by_value_id(relevant_value_id);
             if (value == _search_value) {
               return [=](const ValueID& value) -> bool { return value <= relevant_value_id; };
             } else {
@@ -296,7 +299,7 @@ class TableScan : public AbstractOperator {
           if (relevant_value_id != INVALID_VALUE_ID) {
             // If we find a ValueId we need to check, if its equal to our _search_value and
             // have our comparator either look for greater or greater and equal ValueIDs, respectively
-            auto value = dictionary->value_by_value_id(relevant_value_id);
+            const auto value = dictionary->value_by_value_id(relevant_value_id);
             if (value == _search_value) {
               return [=](const ValueID& value) -> bool { return value > relevant_value_id; };
             } else {
