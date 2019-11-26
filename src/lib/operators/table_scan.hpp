@@ -209,7 +209,7 @@ class TableScan : public AbstractOperator {
         case ScanType::OpNotEquals:
           return [=](const T& value) -> bool { return value != _search_value; };
         default:
-          throw std::runtime_error("Unknow ScanType");
+          throw std::runtime_error("Unknown ScanType");
       }
     }
 
@@ -263,7 +263,7 @@ class TableScan : public AbstractOperator {
           }
           return [=](const ValueID& value) -> bool { return true; };
         default:
-          throw std::runtime_error("Unknow ScanType");
+          throw std::runtime_error("Unknown ScanType");
       }
     }
   };
