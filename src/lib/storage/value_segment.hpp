@@ -30,6 +30,9 @@ class ValueSegment : public BaseSegment {
   // returns the calculated memory usage
   size_t estimate_memory_usage() const override;  // mit final hinter const -> schlägt fehl
 
+  // returns the estimated memory usage from an element of type T
+  size_t estimate_memory_usage_per_element() const override;
+
  protected:
   std::vector<T> _values;
 };

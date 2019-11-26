@@ -18,37 +18,48 @@ class Table;
 
 class TableScan : public AbstractOperator {
  public:
+  // Create a TableScan operator
+  // Parameters:
+  // 'in' gives us the table or operator that will be used as function input
+  // column_id specifies the relevant column
+  // search_value and scan_type specify the compare function
+  // that will be executed to decide, if a value is part of the result
   TableScan(const std::shared_ptr<const AbstractOperator> in, ColumnID column_id, const ScanType scan_type,
             const AllTypeVariant search_value)
       : AbstractOperator(in, in), _column_id(column_id), _scan_type(scan_type), _search_value(search_value) {}
 
-  ~TableScan() {}
-
+  // return the column_id of the column that our comparison will check against
   ColumnID column_id() const { return _column_id; }
 
+  // return the type of scan we will execute (e.g., OpEquals(==), OpLessThan(<), etc.)
   ScanType scan_type() const { return _scan_type; }
 
+  // return the value that our table elements will be compared against
   const AllTypeVariant& search_value() const { return _search_value; }
 
  protected:
+  // implementation of this operator to give the table that will be set as output
+  // note: this will call the internal implementation of BaseTableScanImpl
   std::shared_ptr<const Table> _on_execute() override;
 
   const ColumnID _column_id;
   const ScanType _scan_type;
   const AllTypeVariant _search_value;
 
-  // Nested class declaration
+  /*
+  ** Internal class that implements the TableScan with the relevant type
+  */
   template <typename T>
   class BaseTableScanImpl : public AbstractOperator {
    public:
+    // Create a BaseTableScanImpl operator
+    // Parameters are equal to the TableScan operator at the top of the file
     BaseTableScanImpl(const std::shared_ptr<const AbstractOperator> in, ScanType scan_type, ColumnID column_id,
                       AllTypeVariant search_value)
         : AbstractOperator(in, in),
           _scan_type(scan_type),
           _column_id(column_id),
-          _search_value(type_cast<T>(search_value)){};
-
-    ~BaseTableScanImpl() {}
+          _search_value(type_cast<T>(search_value)) {}
 
    protected:
     const ScanType _scan_type;

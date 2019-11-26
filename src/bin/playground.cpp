@@ -1,4 +1,6 @@
 #include <iostream>
+#include <memory>
+#include <string>
 
 #include "../lib/operators/get_table.hpp"
 #include "../lib/storage/storage_manager.hpp"
