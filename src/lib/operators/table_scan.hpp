@@ -100,8 +100,8 @@ class TableScan : public AbstractOperator {
       auto new_table = std::make_shared<Table>();
       new_table->emplace_chunk(std::move(new_chunk));
       for (auto column_index = 0; column_index < column_count; ++column_index) {
-        new_table->add_column_definition(table->column_name(ColumnID{column_index}),
-                                         table->column_type(ColumnID{column_index}));
+        new_table->add_column_definition(table->column_name(ColumnID(column_index)),
+                                         table->column_type(ColumnID(column_index)));
       }
       return new_table;
     }
@@ -143,16 +143,22 @@ class TableScan : public AbstractOperator {
       auto referenced_position_list = segment->pos_list();
       ChunkID current_chunk_id = referenced_table->chunk_count();
       std::shared_ptr<ValueSegment<T>> value_segment;
+      std::vector<T> values;
       std::shared_ptr<DictionarySegment<T>> dictionary_segment;
+      std::shared_ptr<BaseAttributeVector> attribute_vector;
+      std::function<bool(const ValueID&)> comparator;
       bool is_value_segment = false;
 
       for (const auto& row_id : *referenced_position_list) {
         if (current_chunk_id != row_id.chunk_id) {
           if ((value_segment = std::dynamic_pointer_cast<ValueSegment<T>>(
                    referenced_table->get_chunk(row_id.chunk_id).get_segment(_column_id)))) {
+            values = value_segment->values();
             is_value_segment = true;
           } else if ((dictionary_segment = std::dynamic_pointer_cast<DictionarySegment<T>>(
                           referenced_table->get_chunk(row_id.chunk_id).get_segment(_column_id)))) {
+            attribute_vector = dictionary_segment->attribute_vector();
+            comparator = _create_relevant_dictionary_compare(dictionary_segment);
             is_value_segment = false;
           } else {
             throw std::runtime_error("Segment Type does not match search type");
@@ -160,11 +166,11 @@ class TableScan : public AbstractOperator {
         }
 
         if (is_value_segment) {
-          if (_compare_function(type_cast<T>((*value_segment)[row_id.chunk_offset]))) {
+          if (_compare_function((values[row_id.chunk_offset]))) {
             position_list.push_back(RowID{row_id.chunk_id, row_id.chunk_offset});
           }
         } else {
-          if (_compare_function(dictionary_segment->get(row_id.chunk_offset))) {
+          if (comparator(attribute_vector->get(row_id.chunk_offset))) {
             position_list.push_back(RowID{row_id.chunk_id, row_id.chunk_offset});
           }
         }
@@ -186,6 +192,8 @@ class TableScan : public AbstractOperator {
       return std::make_shared<const PosList>(position_list);
     }
 
+    // return a function that compares an incoming value with our search_value depending on the scan_type
+    // note: This function only needs to be executed once per TableScanImpl
     std::function<bool(const T&)> _create_compare_function() {
       switch (_scan_type) {
         case ScanType::OpEquals:
