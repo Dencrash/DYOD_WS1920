@@ -119,28 +119,19 @@ class TableScan : public AbstractOperator {
       }
     }
 
-    std::shared_ptr<const PosList> _scan_dictionary(std::shared_ptr<DictionarySegment<T>> segment, ChunkID chunk_id) {
-      PosList position_list;
-      auto segment_size = segment->size();
-      for (size_t row_index = 0; row_index < segment_size; ++row_index) {
-        if (_compare_function(segment->get((ChunkOffset)row_index))) {
-          position_list.push_back(RowID{chunk_id, (ChunkOffset)row_index});
-        }
-      }
-      return std::make_shared<const PosList>(position_list);
-    }
-
     std::shared_ptr<const PosList> _scan_dictionary_segment(std::shared_ptr<DictionarySegment<T>> segment,
                                                             ChunkID chunk_id) {
       PosList position_list;
 
-      auto dictionary = segment->dictionary();
       auto attribute_vector = segment->attribute_vector();
 
-      for (size_t row_index = 0; row_index < segment->size(); ++row_index) {
-        auto value = segment->value_by_value_id(static_cast<ValueID>(row_index));
-        ValueID search_value_id = segment->lower_bound(value);
-        position_list.push_back(RowID{chunk_id, search_value_id});
+      auto comparator = _create_relevant_dictionary_compare(segment);
+
+      auto attribute_vector_size = attribute_vector->size();
+      for (size_t row_index = 0; row_index < attribute_vector_size; ++row_index) {
+        if (comparator(attribute_vector->get(row_index))) {
+          position_list.push_back(RowID{chunk_id, ChunkOffset(row_index)});
+        }
       }
       return std::make_shared<const PosList>(position_list);
     }
@@ -209,6 +200,60 @@ class TableScan : public AbstractOperator {
           return [=](const T& value) -> bool { return value > _search_value; };
         case ScanType::OpNotEquals:
           return [=](const T& value) -> bool { return value != _search_value; };
+        default:
+          throw std::runtime_error("Unknow ScanType");
+      }
+    }
+
+    std::function<bool(const ValueID&)> _create_relevant_dictionary_compare(std::shared_ptr<DictionarySegment<T>> dictionary) {
+      ValueID relevant_value_id;
+      switch (_scan_type) {
+        case ScanType::OpEquals:
+          relevant_value_id = dictionary->lower_bound(_search_value);
+          if (relevant_value_id != INVALID_VALUE_ID && dictionary->value_by_value_id(relevant_value_id) == _search_value) {
+            return [=](const ValueID& value) -> bool { return value == relevant_value_id; };
+          }
+          return [=](const ValueID& value) -> bool { return false; };
+        case ScanType::OpLessThanEquals:
+          relevant_value_id = dictionary->lower_bound(_search_value);
+          if (relevant_value_id != INVALID_VALUE_ID) {
+            auto value = dictionary->value_by_value_id(relevant_value_id);
+            if (value == _search_value) {
+              return [=](const ValueID& value) -> bool { return value <= relevant_value_id; };
+            } else {
+              return [=](const ValueID& value) -> bool { return value < relevant_value_id; };
+            }
+          }
+          return [=](const ValueID& value) -> bool { return true; };
+        case ScanType::OpGreaterThanEquals:
+          relevant_value_id = dictionary->lower_bound(_search_value);
+          if (relevant_value_id != INVALID_VALUE_ID) {
+            return [=](const ValueID& value) -> bool { return value >= relevant_value_id; };
+          }
+          return [=](const ValueID& value) -> bool { return false; };
+        case ScanType::OpLessThan:
+          relevant_value_id = dictionary->lower_bound(_search_value);
+          if (relevant_value_id != INVALID_VALUE_ID) {
+            return [=](const ValueID& value) -> bool { return value < relevant_value_id; };
+          }
+          return [=](const ValueID& value) -> bool { return true; };
+        case ScanType::OpGreaterThan:
+          relevant_value_id = dictionary->lower_bound(_search_value);
+          if (relevant_value_id != INVALID_VALUE_ID) {
+            auto value = dictionary->value_by_value_id(relevant_value_id);
+            if (value == _search_value) {
+              return [=](const ValueID& value) -> bool { return value > relevant_value_id; };
+            } else {
+              return [=](const ValueID& value) -> bool { return value >= relevant_value_id; };
+            }
+          }
+          return [=](const ValueID& value) -> bool { return false; };
+        case ScanType::OpNotEquals:
+          relevant_value_id = dictionary->lower_bound(_search_value);
+          if (relevant_value_id != INVALID_VALUE_ID && dictionary->value_by_value_id(relevant_value_id) == _search_value) {
+            return [=](const ValueID& value) -> bool { return value != relevant_value_id; };
+          }
+          return [=](const ValueID& value) -> bool { return true; };
         default:
           throw std::runtime_error("Unknow ScanType");
       }
