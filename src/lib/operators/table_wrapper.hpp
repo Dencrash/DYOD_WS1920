@@ -14,6 +14,8 @@ namespace opossum {
  */
 class TableWrapper : public AbstractOperator {
  public:
+  // create a TableWrapper operator
+  // table gives the specific table that will be used as output
   explicit TableWrapper(const std::shared_ptr<const Table> table);
 
  protected:

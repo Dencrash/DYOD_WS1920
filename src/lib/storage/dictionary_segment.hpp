@@ -36,10 +36,14 @@ class DictionarySegment : public BaseSegment {
    */
   explicit DictionarySegment(const std::shared_ptr<BaseSegment>& base_segment) :
   _dictionary(std::make_shared<std::vector<T>>()) {
+    // We create a set with all values in the base segment to filter out all duplicates
     std::set<T> dictionary_helper;
     for (size_t segment_index = 0; segment_index < base_segment->size(); ++segment_index) {
       dictionary_helper.insert(type_cast<T>((*base_segment)[segment_index]));
     }
+
+    // Here we use the fact that all values in a set are already sorted to create our sorted vector
+    // This form might be hard to read but the benefit is that no new memory is allocated for the entries
     _dictionary->reserve(dictionary_helper.size());
     for (auto it = dictionary_helper.begin(); it != dictionary_helper.end();) {
       _dictionary->emplace_back(std::move(dictionary_helper.extract(it++).value()));
@@ -47,6 +51,7 @@ class DictionarySegment : public BaseSegment {
 
     _set_attribute_vector(_dictionary->size(), base_segment->size());
 
+    // Create the attribute vector based on the positions in the dictionary
     auto values = std::dynamic_pointer_cast<ValueSegment<T>>(base_segment)->values();
     for (size_t segment_index = 0; segment_index < base_segment->size(); ++segment_index) {
       T current_attribute_value = values[segment_index];
@@ -56,9 +61,6 @@ class DictionarySegment : public BaseSegment {
       _attribute_vector->set(segment_index, static_cast<ValueID>(dict_index));
     }
   }
-
-  // SEMINAR INFORMATION: Since most of these methods depend on the template parameter, you will have to implement
-  // the DictionarySegment in this file. Replace the method signatures with actual implementations.
 
   // return the value at a certain position. If you want to write efficient operators, back off!
   AllTypeVariant operator[](const ChunkOffset chunk_offset) const override {
@@ -126,6 +128,11 @@ class DictionarySegment : public BaseSegment {
     auto att_size = _attribute_vector->size() * _attribute_vector->width();
 
     return dic_size + att_size;
+  }
+
+  // return the calculated memory usage of one element of type T
+  size_t estimate_memory_usage_per_element() const override {
+    return sizeof(T);
   }
 
  protected:

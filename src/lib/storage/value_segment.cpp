@@ -42,6 +42,11 @@ size_t ValueSegment<T>::estimate_memory_usage() const {
   return num_entries * data_type_size;
 }
 
+template <typename T>
+size_t ValueSegment<T>::estimate_memory_usage_per_element() const {
+    return sizeof(T);
+}
+
 EXPLICITLY_INSTANTIATE_DATA_TYPES(ValueSegment);
 
 }  // namespace opossum

@@ -36,6 +36,7 @@ class AbstractOperator : private Noncopyable {
   AbstractOperator(AbstractOperator&&) = default;
   AbstractOperator& operator=(AbstractOperator&&) = default;
 
+  // function call to execute an operator and set the output
   void execute();
 
   // returns the result of the operator

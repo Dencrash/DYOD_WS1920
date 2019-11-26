@@ -18,8 +18,15 @@ class Table;
 
 class TableScan : public AbstractOperator {
  public:
-  TableScan(const std::shared_ptr<const AbstractOperator> in, ColumnID column_id, const ScanType scan_type,
-            const AllTypeVariant search_value) : AbstractOperator(in, in), _column_id(column_id), _scan_type(scan_type), _search_value(search_value) {}
+  // Create a TableScan operator
+  // Parameters:
+  // 'in' gives us the table or operator that will be used as function input
+  // column_id specifies the relevant column
+  // search_value and scan_type specify the compare function
+  // that will be executed to decide, if a value is part of the result
+  TableScan(const std::shared_ptr<const AbstractOperator> in, ColumnID column_id,
+            const ScanType scan_type, const AllTypeVariant search_value) : AbstractOperator(in, in),
+              _column_id(column_id), _scan_type(scan_type), _search_value(search_value) {}
 
   ~TableScan() {}
 

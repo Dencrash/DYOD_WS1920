@@ -17,6 +17,7 @@ AbstractOperator::AbstractOperator(const std::shared_ptr<const AbstractOperator>
 void AbstractOperator::execute() { _output = _on_execute(); }
 
 std::shared_ptr<const Table> AbstractOperator::get_output() const {
+  // throw runtime error, if the output is called before the operator was executed
   if (!_output) {
     throw std::runtime_error("Operator was never executed");
   }
