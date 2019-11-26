@@ -141,7 +141,7 @@ class TableScan : public AbstractOperator {
       PosList position_list;
       const auto referenced_table = segment->referenced_table();
       const auto referenced_position_list = segment->pos_list();
-      ChunkID current_chunk_id = referenced_table->chunk_count();
+      const ChunkID current_chunk_id = referenced_table->chunk_count();
       std::shared_ptr<ValueSegment<T>> value_segment;
       std::shared_ptr<DictionarySegment<T>> dictionary_segment;
       bool is_value_segment = false;
@@ -175,8 +175,8 @@ class TableScan : public AbstractOperator {
 
     std::shared_ptr<const PosList> _scan_value_segment(std::shared_ptr<ValueSegment<T>> segment, ChunkID chunk_id) {
       PosList position_list;
-      auto values = std::make_shared<std::vector<T>>(segment->values());
-      auto values_size = values->size();
+      const auto values = std::make_shared<std::vector<T>>(segment->values());
+      const auto values_size = values->size();
       for (uint32_t value_index = 0; value_index < values_size; ++value_index) {
         if (_compare_function((*values)[value_index])) {
           position_list.push_back(RowID{chunk_id, value_index});
@@ -219,7 +219,7 @@ class TableScan : public AbstractOperator {
         case ScanType::OpLessThanEquals:
           relevant_value_id = dictionary->lower_bound(_search_value);
           if (relevant_value_id != INVALID_VALUE_ID) {
-            auto value = dictionary->value_by_value_id(relevant_value_id);
+            const auto value = dictionary->value_by_value_id(relevant_value_id);
             if (value == _search_value) {
               return [=](const ValueID& value) -> bool { return value <= relevant_value_id; };
             } else {
@@ -242,7 +242,7 @@ class TableScan : public AbstractOperator {
         case ScanType::OpGreaterThan:
           relevant_value_id = dictionary->lower_bound(_search_value);
           if (relevant_value_id != INVALID_VALUE_ID) {
-            auto value = dictionary->value_by_value_id(relevant_value_id);
+            const auto value = dictionary->value_by_value_id(relevant_value_id);
             if (value == _search_value) {
               return [=](const ValueID& value) -> bool { return value > relevant_value_id; };
             } else {
