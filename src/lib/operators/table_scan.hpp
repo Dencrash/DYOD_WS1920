@@ -80,8 +80,7 @@ class TableScan : public AbstractOperator {
         if (!chunk.size()) {
           continue;
         }
-        auto position_list = _scan_chunk(chunk, chunk_id);
-        full_position_list->insert(full_position_list->end(), position_list->begin(), position_list->end());
+      full_position_list = _scan_chunk(chunk, chunk_id, full_position_list);
       }
 
       Chunk new_chunk;
@@ -92,7 +91,6 @@ class TableScan : public AbstractOperator {
       }
 
       for (auto column_index = 0; column_index < column_count; ++column_index) {
-        // Remember to change referenced table in case of reference segment
         new_chunk.add_segment(std::make_shared<ReferenceSegment>(
             ReferenceSegment(referenced_table, (ColumnID)column_index, full_position_list)));
       }
@@ -106,23 +104,21 @@ class TableScan : public AbstractOperator {
       return new_table;
     }
 
-    std::shared_ptr<const PosList> _scan_chunk(const Chunk& chunk, ChunkID chunk_id) {
+    std::shared_ptr<PosList> _scan_chunk(const Chunk& chunk, ChunkID chunk_id, std::shared_ptr<PosList> pos_list) {
       if (const auto value_segment = std::dynamic_pointer_cast<ValueSegment<T>>(chunk.get_segment(_column_id))) {
-        return _scan_value_segment(value_segment, chunk_id);
+        return _scan_value_segment(value_segment, chunk_id, pos_list);
       } else if (auto reference_segment = std::dynamic_pointer_cast<ReferenceSegment>(chunk.get_segment(_column_id))) {
-        return _scan_reference_segment(reference_segment, chunk_id);
+        return _scan_reference_segment(reference_segment, chunk_id, pos_list);
       } else if (auto dictionary_segment =
                      std::dynamic_pointer_cast<DictionarySegment<T>>(chunk.get_segment(_column_id))) {
-        return _scan_dictionary_segment(dictionary_segment, chunk_id);
+        return _scan_dictionary_segment(dictionary_segment, chunk_id, pos_list);
       } else {
         throw std::runtime_error("Segment Type does not match search type");
       }
     }
 
-    std::shared_ptr<const PosList> _scan_dictionary_segment(std::shared_ptr<DictionarySegment<T>> segment,
-                                                            ChunkID chunk_id) {
-      PosList position_list;
-
+    std::shared_ptr<PosList> _scan_dictionary_segment(std::shared_ptr<DictionarySegment<T>> segment,
+                                                            ChunkID chunk_id, std::shared_ptr<PosList> position_list) {
       auto attribute_vector = segment->attribute_vector();
 
       auto comparator = _create_relevant_dictionary_compare(segment);
@@ -130,15 +126,14 @@ class TableScan : public AbstractOperator {
       auto attribute_vector_size = attribute_vector->size();
       for (size_t row_index = 0; row_index < attribute_vector_size; ++row_index) {
         if (comparator(attribute_vector->get(row_index))) {
-          position_list.push_back(RowID{chunk_id, ChunkOffset(row_index)});
+          position_list->push_back(RowID{chunk_id, ChunkOffset(row_index)});
         }
       }
-      return std::make_shared<const PosList>(position_list);
+      return position_list;
     }
 
-    std::shared_ptr<const PosList> _scan_reference_segment(std::shared_ptr<ReferenceSegment> segment,
-                                                           ChunkID chunk_id) {
-      PosList position_list;
+    std::shared_ptr<PosList> _scan_reference_segment(std::shared_ptr<ReferenceSegment> segment,
+                                                           ChunkID chunk_id, std::shared_ptr<PosList> position_list) {
       auto referenced_table = segment->referenced_table();
       auto referenced_position_list = segment->pos_list();
       ChunkID current_chunk_id = referenced_table->chunk_count();
@@ -167,29 +162,28 @@ class TableScan : public AbstractOperator {
 
         if (is_value_segment) {
           if (_compare_function((values[row_id.chunk_offset]))) {
-            position_list.push_back(RowID{row_id.chunk_id, row_id.chunk_offset});
+            position_list->push_back(RowID{row_id.chunk_id, row_id.chunk_offset});
           }
         } else {
           if (comparator(attribute_vector->get(row_id.chunk_offset))) {
-            position_list.push_back(RowID{row_id.chunk_id, row_id.chunk_offset});
+            position_list->push_back(RowID{row_id.chunk_id, row_id.chunk_offset});
           }
         }
       }
 
-      return std::make_shared<const PosList>(position_list);
+      return position_list;
     }
 
-    std::shared_ptr<const PosList> _scan_value_segment(std::shared_ptr<ValueSegment<T>> segment, ChunkID chunk_id) {
-      PosList position_list;
+    std::shared_ptr<PosList> _scan_value_segment(std::shared_ptr<ValueSegment<T>> segment, ChunkID chunk_id, std::shared_ptr<PosList> position_list) {
       auto values = std::make_shared<std::vector<T>>(segment->values());
       auto values_size = values->size();
       for (uint32_t value_index = 0; value_index < values_size; ++value_index) {
         if (_compare_function((*values)[value_index])) {
-          position_list.push_back(RowID{chunk_id, value_index});
+          position_list->push_back(RowID{chunk_id, value_index});
         }
       }
 
-      return std::make_shared<const PosList>(position_list);
+      return position_list;
     }
 
     // return a function that compares an incoming value with our search_value depending on the scan_type
