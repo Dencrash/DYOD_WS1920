@@ -100,8 +100,8 @@ class TableScan : public AbstractOperator {
       auto new_table = std::make_shared<Table>();
       new_table->emplace_chunk(std::move(new_chunk));
       for (auto column_index = 0; column_index < column_count; ++column_index) {
-        new_table->add_column_definition(table->column_name(ColumnID{column_index}),
-                                         table->column_type(ColumnID{column_index}));
+        new_table->add_column_definition(table->column_name(ColumnID(column_index)),
+                                         table->column_type(ColumnID(column_index)));
       }
       return new_table;
     }
@@ -201,7 +201,7 @@ class TableScan : public AbstractOperator {
         case ScanType::OpNotEquals:
           return [=](const T& value) -> bool { return value != _search_value; };
         default:
-          throw std::runtime_error("Unknow ScanType");
+          throw std::runtime_error("Unknown ScanType");
       }
     }
 
@@ -258,7 +258,7 @@ class TableScan : public AbstractOperator {
           }
           return [=](const ValueID& value) -> bool { return true; };
         default:
-          throw std::runtime_error("Unknow ScanType");
+          throw std::runtime_error("Unknown ScanType");
       }
     }
   };
