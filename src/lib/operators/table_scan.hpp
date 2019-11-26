@@ -31,25 +31,26 @@ class TableScan : public AbstractOperator {
 
   ScanType scan_type() const { return _scan_type; }
 
-  const AllTypeVariant& search_value() const { return BaseTableScanImpl<T>::search_value(); }
+  const AllTypeVariant& search_value() const { return _search_value; }
 
-  void make_unique_by_column_type(std::shared_ptr<BaseSegment> base_segment) const {
-    auto pointer_cast = std::dynamic_pointer_cast<BaseSegment>(base_segment);
-  }
+  // void make_unique_by_column_type(std::shared_ptr<BaseSegment> base_segment) const {
+  //   auto pointer_cast = std::dynamic_pointer_cast<BaseSegment>(base_segment);
+  // }
 
  protected:
+  const ColumnID _column_id;
+  const ScanType _scan_type;
+  const AllTypeVariant _search_value;
+
   std::shared_ptr<const Table> _on_execute() override;
-  ColumnID _column_id;
-  ScanType _scan_type;
-  AllTypeVariant _search_value;
 
   // Nested class declaration
   template <typename T>
   class BaseTableScanImpl : public AbstractOperator {
    public:
-    void access_table_scan(TableScan* t) { t->search_value(); }
+    void access_table_scan(TableScan* t);
 
-    const T& search_value() const { return type_cast<T>(_search_value); }
+    //const T& search_value() const { return type_cast<T>(_search_value); }
 
     //  protected:
     //   AllTypeVariant _search_value;
