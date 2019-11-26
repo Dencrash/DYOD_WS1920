@@ -69,10 +69,10 @@ class TableScan : public AbstractOperator {
 
     std::shared_ptr<const Table> _on_execute() {
       _compare_function = _create_compare_function();
-      auto table = _input_table_left();
+      const auto table = _input_table_left();
       auto referenced_table = table;
-      auto chunk_count = table->chunk_count();
-      auto column_count = table->column_count();
+      const auto chunk_count = table->chunk_count();
+      const auto column_count = table->column_count();
       auto full_position_list = std::make_shared<PosList>();
 
       for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
@@ -123,11 +123,11 @@ class TableScan : public AbstractOperator {
                                                             ChunkID chunk_id) {
       PosList position_list;
 
-      auto attribute_vector = segment->attribute_vector();
+      const auto attribute_vector = segment->attribute_vector();
 
-      auto comparator = _create_relevant_dictionary_compare(segment);
+      const auto comparator = _create_relevant_dictionary_compare(segment);
 
-      auto attribute_vector_size = attribute_vector->size();
+      const auto attribute_vector_size = attribute_vector->size();
       for (size_t row_index = 0; row_index < attribute_vector_size; ++row_index) {
         if (comparator(attribute_vector->get(row_index))) {
           position_list.push_back(RowID{chunk_id, ChunkOffset(row_index)});
@@ -139,8 +139,8 @@ class TableScan : public AbstractOperator {
     std::shared_ptr<const PosList> _scan_reference_segment(std::shared_ptr<ReferenceSegment> segment,
                                                            ChunkID chunk_id) {
       PosList position_list;
-      auto referenced_table = segment->referenced_table();
-      auto referenced_position_list = segment->pos_list();
+      const auto referenced_table = segment->referenced_table();
+      const auto referenced_position_list = segment->pos_list();
       ChunkID current_chunk_id = referenced_table->chunk_count();
       std::shared_ptr<ValueSegment<T>> value_segment;
       std::shared_ptr<DictionarySegment<T>> dictionary_segment;
@@ -205,12 +205,14 @@ class TableScan : public AbstractOperator {
       }
     }
 
-    std::function<bool(const ValueID&)> _create_relevant_dictionary_compare(std::shared_ptr<DictionarySegment<T>> dictionary) {
+    std::function<bool(const ValueID&)> _create_relevant_dictionary_compare(
+        std::shared_ptr<DictionarySegment<T>> dictionary) {
       ValueID relevant_value_id;
       switch (_scan_type) {
         case ScanType::OpEquals:
           relevant_value_id = dictionary->lower_bound(_search_value);
-          if (relevant_value_id != INVALID_VALUE_ID && dictionary->value_by_value_id(relevant_value_id) == _search_value) {
+          if (relevant_value_id != INVALID_VALUE_ID &&
+              dictionary->value_by_value_id(relevant_value_id) == _search_value) {
             return [=](const ValueID& value) -> bool { return value == relevant_value_id; };
           }
           return [=](const ValueID& value) -> bool { return false; };
@@ -250,7 +252,8 @@ class TableScan : public AbstractOperator {
           return [=](const ValueID& value) -> bool { return false; };
         case ScanType::OpNotEquals:
           relevant_value_id = dictionary->lower_bound(_search_value);
-          if (relevant_value_id != INVALID_VALUE_ID && dictionary->value_by_value_id(relevant_value_id) == _search_value) {
+          if (relevant_value_id != INVALID_VALUE_ID &&
+              dictionary->value_by_value_id(relevant_value_id) == _search_value) {
             return [=](const ValueID& value) -> bool { return value != relevant_value_id; };
           }
           return [=](const ValueID& value) -> bool { return true; };
