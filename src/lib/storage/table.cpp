@@ -19,7 +19,7 @@
 
 namespace opossum {
 
-Table::Table(const uint32_t chunk_size) : _max_chunk_size(chunk_size){
+Table::Table(const uint32_t chunk_size) : _max_chunk_size(chunk_size) {
   _chunks.push_back(std::make_shared<Chunk>());
 }
 
@@ -61,7 +61,7 @@ uint16_t Table::column_count() const { return _chunks.back()->column_count(); }
 uint64_t Table::row_count() const {
   uint64_t sum = 0;
   // Since we cannot delete data, all old chunks will have maximum chunk size
-  for (const auto& chunk: _chunks) {
+  for (const auto& chunk : _chunks) {
     sum += chunk->size();
   }
   return sum;
@@ -93,7 +93,7 @@ void Table::compress_chunk(ChunkID chunk_id) {
   DebugAssert(chunk_id < _chunks.size(), "ChunkID out of range");
   const auto chunk = _chunks[chunk_id];
 
-  // create new empty chunk  
+  // create new empty chunk
   auto compressed_chunk = std::make_shared<Chunk>();
 
   // number of threads needed
@@ -110,7 +110,6 @@ void Table::compress_chunk(ChunkID chunk_id) {
                         (type, segment);
 
         dictionary_segments[segment_index] = compressed_chunk;
-
     }, segment_index, segment, segment_type));
   }
 
@@ -128,8 +127,7 @@ void Table::compress_chunk(ChunkID chunk_id) {
 void Table::emplace_chunk(Chunk chunk) {
   if (_chunks.front()->size()) {
     _chunks.emplace_back(std::make_shared<Chunk>());
-  }
-  else {
+  } else {
     auto chunk_ptr = std::make_shared<Chunk>(std::move(chunk));
     _chunks.front() = std::move(chunk_ptr);
   }

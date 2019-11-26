@@ -8,7 +8,7 @@
 #include "storage/table.hpp"
 
 namespace opossum {
-//The fixture for testing class GetTable.
+// The fixture for testing class GetTable.
 class OperatorsGetTableTest : public BaseTest {
  protected:
   void SetUp() override {

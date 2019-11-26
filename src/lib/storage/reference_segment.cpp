@@ -1,3 +1,7 @@
+#include <memory>
+#include <vector>
+#include <string>
+
 #include "reference_segment.hpp"
 
 namespace opossum {
@@ -46,7 +50,7 @@ size_t ReferenceSegment::estimate_memory_usage_per_element() const {
   return relevant_segment->estimate_memory_usage_per_element();
 }
 
-} // namespace opossum
+}  // namespace opossum
 
 
 
